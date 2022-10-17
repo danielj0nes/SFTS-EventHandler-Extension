@@ -49,10 +49,13 @@ class MainViewProvider implements vscode.WebviewViewProvider {
             message => {
                 switch (message.command) {
                     case "runScript":
-                        vscode.window.showErrorMessage(message.text);
-                        var spawn = require("child_process").spawn;
-                        spawn("powershell.exe",["C:\\Users\\sftsadmin\\Desktop\\VSCE\\SFTS-EventHandler-Extension\\test.ps1 hello"]);
-                        console.log("Hi");
+                        
+                        const spawn = require("child_process").spawn;
+                        spawn("powershell.exe",
+                        ['-ExecutionPolicy', 'Bypass',
+                        '-file', 'C:\\Users\\sftsadmin\\Desktop\\VSCE\\SFTS-EventHandler-Extension\\Event_Handler_Setup.ps1',
+                        `${message.projectpath}`, `${message.projectname}`]);
+                        vscode.window.showInformationMessage(`Project ${message.projectname} successfully configured in ${message.projectpath}.`);
                         return;
                 }
             }
@@ -60,57 +63,64 @@ class MainViewProvider implements vscode.WebviewViewProvider {
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
-        return `
-        <!DOCTYPE html>
+        return `<!DOCTYPE html>
         <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <meta http-equiv="X-UA-Compatible" content="ie=edge">
-                <style> 
-                    input[type=text] {
-                        width: 100%;
-                        margin: 8px 0;
-                        box-sizing: border-box;
-                        font-size: 12px;
-                    }
-                    h2, p {
-                        padding: 0;
-                        margin: 0;
-                    }
-                    button {
-                        position: absolute;
-                        left: 50%;
-                        transform: translateX(-50%);
-                    }
-                </style>
-            </head>
-            <body>
-                <h2>Project directory</h1>
-                <p style="font-size: 12px">This is the location where the template will be configured.</p>
-                <input type="text" id="dirInput" value=${curDir} required>
-                <p style="margin: 15px"></p>
-                <h2>Project name</h2>
-                <input type="text" id="projInput" value=${projectName} required>
-                <p style="margin: 15px"></p>
-                <button id="runScript">Setup project</button>
-
-                <script>
-                    const vscode = acquireVsCodeApi();
-                    const runBtn = document.getElementById("runScript");
-                    runBtn.addEventListener("click", execScript);
-
-                    function execScript() {
-                        vscode.postMessage({
-                            command: 'runScript',
-                            text: 'xxx'
-                        })
-                    }
-                </script>
-
-            </body>
-        </html>
-        `;
+        
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="ie=edge">
+            <style>
+              input[type=text] {
+                width: 100%;
+                margin: 8px 0;
+                box-sizing: border-box;
+                font-size: 12px;
+              }
+        
+              h2,
+              p {
+                padding: 0;
+                margin: 0;
+              }
+        
+              button {
+                position: absolute;
+                left: 50%;
+                transform: translateX(-50%);
+              }
+            </style>
+          </head>
+        
+          <body>
+            <h2>Project directory</h2>
+            <p style="font-size: 12px">This is the location where the template will be configured.</p>
+            <input type="text" id="dirInput" value="${curDir}" required>
+            <p style="margin: 15px"></p>
+            <h2>Project name</h2>
+            <input type="text" id="projInput" value="${projectName}" required>
+            <p style="margin: 15px"></p>
+            <button id="runScript">Setup project</button>
+            <script>
+              const vscode = acquireVsCodeApi();
+              const runBtn = document.getElementById("runScript");
+        
+              function execScript() {
+                const projectpath = document.getElementById("dirInput").value;
+                const projectname = document.getElementById("projInput").value;
+        
+                vscode.postMessage({
+                  command: "runScript",
+                  projectpath: projectpath,
+                  projectname: projectname
+                })
+              }
+        
+              runBtn.addEventListener("click", execScript);
+            </script>
+          </body>
+        
+        </html>`;
     }
 }
 

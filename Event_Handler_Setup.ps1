@@ -1,19 +1,14 @@
-# JDA - Swiss FTS - 19.09.2022
-# Take in the first argument from the command line as the project name
-$projectname = $args[0]
+# JDA - Swiss FTS - 17.10.2022
+$projectpath = $args[0]
+$projectname = $args[1]
  
-# Confirmation before execution
-Write-Host "Running this script will setup a project with the name" -ForegroundColor Red -NoNewLine
-Write-Host " '$($projectname)' " -ForegroundColor Yellow -NoNewLine
-Write-Host "in the directory" -ForegroundColor Red -NoNewLine
-Write-Host " '$($PSScriptRoot)' " -ForegroundColor Yellow
-$resp = Read-Host "Continue? (y/n)"
-if ($resp.ToLower() -ne "y") {exit}
+Write-Output $projectpath $projectname
+Set-Location -Path $projectpath
  
 # Begin setup of the project with the given project name
-dotnet new sln
-dotnet new classlib -o $projectname
-$csproj = ".\$($projectname)\$($projectname).csproj"
+dotnet new sln --name $projectname -o $projectpath 
+dotnet new classlib --name $projectname -o $projectpath 
+$csproj = "$($projectpath)\$($projectname).csproj"
 dotnet sln add $csproj
  
 # Replace default .csproj with SFTS event handler template
@@ -26,7 +21,7 @@ $csproj_write = @"
  
   <PropertyGroup>
     <Company>Swiss FTS AG</Company>
-    <AssemblyTitle>$projectname</AssemblyTitle>
+    <AssemblyTitle>$($projectname)</AssemblyTitle>
     <Copyright>Copyright SFTS 2022</Copyright>
   </PropertyGroup>
  
@@ -39,5 +34,3 @@ $csproj_write = @"
 </Project>
 "@
 $csproj_write | Out-File -FilePath $csproj
- 
-Write-Host "Script execution finished." -ForegroundColor Green
