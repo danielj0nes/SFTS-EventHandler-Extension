@@ -5,6 +5,7 @@ import * as vscode from "vscode";
 import * as child_process from "child_process";
 import fs = require("fs");
 import { scriptText } from "./Event_Handler_Setup";
+import { compileText } from "./Event_Handler_Compile";
 import { preLoadText } from "./Template_EHs/FLR_PreLoadEventHandler";
 import { preSaveText } from "./Template_EHs/FLR_PreSaveEventHandler";
 import { adminMessageText } from "./Template_EHs/General_AdminMessage_PreLoadEventHandler";
@@ -58,10 +59,12 @@ class MainViewProvider implements vscode.WebviewViewProvider {
                     case "runScript":
                         const scriptPath = `${message.projectpath}\\Event_Handler_Setup.ps1`;
                         fs.writeFileSync(scriptPath, scriptText);
-                        child_process.spawnSync("powershell.exe",
+                        const scriptOutput = child_process.spawnSync("powershell.exe",
                         ["-ExecutionPolicy", "Bypass",
                         "-file", scriptPath,
-                        message.projectpath, message.projectname]);
+                        message.projectpath, message.projectname], { encoding: 'utf-8' });
+                        const setupDebug = scriptOutput.stdout;
+                        console.log(setupDebug);
                         fs.unlinkSync(scriptPath);
                         vscode.window.showInformationMessage(`Project ${message.projectname} successfully configured in ${message.projectpath}.`);
                         return;
@@ -79,6 +82,16 @@ class MainViewProvider implements vscode.WebviewViewProvider {
                         }
                         vscode.window.showInformationMessage(`Template file successfully created in ${curDir}`);
                         return;
+                    case "compile":
+                      const compilePath = `${curDir}\\Event_Handler_Compile.ps1`;
+                      fs.writeFileSync(compilePath, compileText);
+                      const compileOutput = child_process.spawnSync("powershell.exe",
+                        ["-ExecutionPolicy", "Bypass",
+                        "-file", compilePath, curDir], { encoding: 'utf-8' });
+                      const compileDebug = compileOutput.stdout;
+                      console.log(compileDebug);
+                      fs.unlinkSync(compilePath);
+                      vscode.window.showInformationMessage(`DLL built in ${curDir}.`);
                 }
             }
         );
@@ -137,8 +150,8 @@ class MainViewProvider implements vscode.WebviewViewProvider {
             <p style="margin: 100px"></p>
 
             <h2>Compile Event Handler</h2>
-            <p style="font-size: 12px">Builds the .dll file - to be imported into Relativity.</p>
-            <button id="compile">Compile</button>
+            <p style="font-size: 12px">Builds the <b>.dll</b> file - to be imported into Relativity.</p>
+            <button id="compile" onclick="compile()">Compile</button>
 
             <script>
               const vscode = acquireVsCodeApi();
@@ -159,6 +172,12 @@ class MainViewProvider implements vscode.WebviewViewProvider {
                 vscode.postMessage({
                     command: "generateFile",
                     fileName: fileType
+                })
+              }
+
+              function compile() {
+                vscode.postMessage({
+                  command: "compile"
                 })
               }
         
