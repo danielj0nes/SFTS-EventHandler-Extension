@@ -26,25 +26,18 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.registerWebviewViewProvider(MainViewProvider.viewType, provider));
 }
 
-
 class MainViewProvider implements vscode.WebviewViewProvider {
-    
-    
     public static readonly viewType = "setup.setupView";
-
     private _view?: vscode.WebviewView;
-
     constructor(
         private readonly _extensionUri: vscode.Uri,
     ) { }
-
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
         context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken,
     ) {
         this._view = webviewView;
-
         webviewView.webview.options = {
             enableScripts: true,
             localResourceRoots: [
@@ -64,10 +57,14 @@ class MainViewProvider implements vscode.WebviewViewProvider {
                         "-file", scriptPath,
                         message.projectpath, message.projectname], { encoding: 'utf-8' });
                         const setupDebug = scriptOutput.stdout;
-                        console.log(setupDebug);
                         fs.unlinkSync(scriptPath);
                         vscode.window.showInformationMessage(`Project ${message.projectname} successfully configured in ${message.projectpath}.`);
+                        webviewView.webview.postMessage({
+                          command: "debug",
+                          debugText: setupDebug
+                        });
                         return;
+                    
                     case "generateFile":
                         switch (message.fileName) {
                           case "preLoad":
@@ -82,6 +79,7 @@ class MainViewProvider implements vscode.WebviewViewProvider {
                         }
                         vscode.window.showInformationMessage(`Template file successfully created in ${curDir}`);
                         return;
+                    
                     case "compile":
                       const compilePath = `${curDir}\\Event_Handler_Compile.ps1`;
                       fs.writeFileSync(compilePath, compileText);
@@ -89,9 +87,12 @@ class MainViewProvider implements vscode.WebviewViewProvider {
                         ["-ExecutionPolicy", "Bypass",
                         "-file", compilePath, curDir], { encoding: 'utf-8' });
                       const compileDebug = compileOutput.stdout;
-                      console.log(compileDebug);
                       fs.unlinkSync(compilePath);
                       vscode.window.showInformationMessage(`DLL built in ${curDir}.`);
+                      webviewView.webview.postMessage({
+                        command: "debug",
+                        debugText: compileDebug
+                      });
                 }
             }
         );
@@ -124,6 +125,18 @@ class MainViewProvider implements vscode.WebviewViewProvider {
                 left: 50%;
                 transform: translateX(-50%);
               }
+              .debugBox {
+                width: 280px;
+                height: 150px;
+                overflow-x: hidden;
+                overflow-y: auto;
+                padding: 5px;
+                background-color: white;
+                color: black;
+                scrollbar-base-color: #DEBB07;
+                white-space: pre-line;
+                resize:both;
+              }
             </style>
           </head>
         
@@ -138,7 +151,7 @@ class MainViewProvider implements vscode.WebviewViewProvider {
             <p style="margin: 15px"></p>
 
             <button id="runScript">Setup project</button>
-            <p style="margin: 100px"></p>
+            <p style="margin: 50px"></p>
 
             <h2>Template Event Handlers</h2>
             <p style="font-size: 12px">Creates a specific SFTS template event handler in the current directory.</p>
@@ -147,13 +160,18 @@ class MainViewProvider implements vscode.WebviewViewProvider {
             <h3 style="display: inline-block">Pre-Save</h3> <button onclick="generateFile('preSave')">Create</button>
             <br />
             <h3 style="display: inline-block">Admin Message</h3> <button onclick="generateFile('adminMessage')">Create</button>
-            <p style="margin: 100px"></p>
+            <p style="margin: 50px"></p>
 
             <h2>Compile Event Handler</h2>
             <p style="font-size: 12px">Builds the <b>.dll</b> file - to be imported into Relativity.</p>
             <button id="compile" onclick="compile()">Compile</button>
+            <p style="margin: 50px"></p>
+            <h2>Debugging</h2>
+            <br />
+            <div id="debugInfo" class="debugBox" style="display: none"></div>
 
             <script>
+              const debugInfoBox = document.getElementById("debugInfo");
               const vscode = acquireVsCodeApi();
               const runBtn = document.getElementById("runScript");
         
@@ -180,7 +198,17 @@ class MainViewProvider implements vscode.WebviewViewProvider {
                   command: "compile"
                 })
               }
-        
+
+              window.addEventListener("message", event => {
+                const message = event.data;
+                switch (message.command) {
+                    case "debug":
+                        debugInfoBox.style.display = "";
+                        debugInfoBox.textContent = message.debugText;
+                        break;
+                }
+            });
+
               runBtn.addEventListener("click", execScript);
             </script>
           </body>
